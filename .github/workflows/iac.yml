@@ -80,7 +80,7 @@ jobs:
           terraform -chdir=$TF_DIR show -json tfplan > plan.json
           pip install -q checkov && checkov -f plan.json --quiet --compact \
             --skip-check CKV_GCP_2,CKV_GCP_40,CKV_GCP_32,CKV_GCP_39,CKV_GCP_28,CKV_GCP_114,CKV_GCP_62,CKV_GCP_38,CKV_GCP_65,CKV_GCP_66,CKV_GCP_84,CKV_GCP_41,CKV_GCP_49,CKV_GCP_12,CKV_GCP_69,CKV_GCP_125
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: tfplan, path: "${{ env.TF_DIR }}/tfplan", retention-days: 1 }
       - name: Comment plan on PR
         if: github.event_name == 'pull_request'
