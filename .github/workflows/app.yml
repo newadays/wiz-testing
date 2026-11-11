@@ -50,7 +50,7 @@ jobs:
           docker run --rm tasky:ci cat /app/wizexercise.txt | tee wizexercise.out
           grep -q "Gbenga" wizexercise.out
       - name: Trivy image scan (fail on CRITICAL/HIGH with a fix available)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: tasky:ci
           format: sarif
