@@ -40,7 +40,7 @@ jobs:
           output_file_path: console,checkov.sarif
           # The exercise REQUIRES these weaknesses; they are documented in security/CHECKOV-SKIPS.md and skipped by ID.
           # Everything else fails the build. Remove the skips and watch the pipeline refuse to deploy.
-          skip_check: CKV_GCP_2,CKV_GCP_40,CKV_GCP_32,CKV_GCP_39,CKV_GCP_28,CKV_GCP_114,CKV_GCP_62,CKV_GCP_38,CKV_GCP_65,CKV_GCP_66,CKV_GCP_84,CKV_GCP_41,CKV_GCP_49,CKV_GCP_12,CKV_GCP_69,CKV_GCP_125
+          skip_check: CKV_GCP_2,CKV_GCP_40,CKV_GCP_32,CKV_GCP_34,CKV_GCP_39,CKV_GCP_28,CKV_GCP_114,CKV_GCP_42,CKV_GCP_62,CKV_GCP_38,CKV_GCP_65,CKV_GCP_66,CKV_GCP_84,CKV_GCP_41,CKV_GCP_49,CKV_GCP_12,CKV_GCP_63,CKV_GCP_69,CKV_GCP_125
           soft_fail: false
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -79,7 +79,7 @@ jobs:
         run: |
           terraform -chdir=$TF_DIR show -json tfplan > plan.json
           pip install -q checkov && checkov -f plan.json --quiet --compact \
-            --skip-check CKV_GCP_2,CKV_GCP_40,CKV_GCP_32,CKV_GCP_39,CKV_GCP_28,CKV_GCP_114,CKV_GCP_62,CKV_GCP_38,CKV_GCP_65,CKV_GCP_66,CKV_GCP_84,CKV_GCP_41,CKV_GCP_49,CKV_GCP_12,CKV_GCP_69,CKV_GCP_125
+            --skip-check CKV_GCP_2,CKV_GCP_40,CKV_GCP_32,CKV_GCP_34,CKV_GCP_39,CKV_GCP_28,CKV_GCP_114,CKV_GCP_42,CKV_GCP_62,CKV_GCP_38,CKV_GCP_65,CKV_GCP_66,CKV_GCP_84,CKV_GCP_41,CKV_GCP_49,CKV_GCP_12,CKV_GCP_63,CKV_GCP_69,CKV_GCP_125
       - uses: actions/upload-artifact@v4
         with: { name: tfplan, path: "${{ env.TF_DIR }}/tfplan", retention-days: 1 }
       - name: Comment plan on PR

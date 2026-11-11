@@ -2,6 +2,10 @@
 
 The IaC pipeline fails on every Checkov finding except the ones listed here. The same list is used in both places Checkov runs in `.github/workflows/iac.yml`: `skip_check` in the "Scan IaC" job (static scan of `terraform/`), and `--skip-check` in the "Scan the plan" step.
 
+The plan scan (`checkov -f plan.json`) sees computed values the file scan can't, so it finds three more: CKV_GCP_34, 42 and 63. They pass the file scan and are skipped for the plan scan; one list is used for both.
+
+The plan scan also logs `Failed to run check CKV_GCP_24` with a Python traceback. That is a Checkov bug in its PodSecurityPolicy check (PSP was removed from Kubernetes); it does not fail the scan.
+
 Verified locally with Checkov 3.3.30 (run inside `terraform/`): with no skips, 17 failures; with this list, 0 failures, exit 0.
 
 ```bash
@@ -15,9 +19,11 @@ checkov -d . --framework terraform --compact --quiet --skip-check <the list in i
 | CKV_GCP_2 | Firewall allows SSH from 0.0.0.0/0 | `google_compute_firewall.mongo_ssh_public` | SSH exposed to the public internet |
 | CKV_GCP_40 | Compute instance has a public IP | `google_compute_instance.mongo` | VM in a public subnet |
 | CKV_GCP_32 | "Block project-wide SSH keys" not enabled | `google_compute_instance.mongo` | SSH exposed to the public internet |
+| CKV_GCP_34 | Instance overrides OS Login (`enable-oslogin = "FALSE"`) | `google_compute_instance.mongo` | SSH exposed to the public internet (classic SSH keys instead of IAM-controlled OS Login). Plan scan only |
 | CKV_GCP_39 | Shielded VM not enabled | `google_compute_instance.mongo` | Outdated, exposed VM |
 | CKV_GCP_28 | Bucket is anonymously or publicly accessible | `google_storage_bucket_iam_member.public_read` | Backups publicly readable and listable |
 | CKV_GCP_114 | Public access prevention not enforced | `google_storage_bucket.backups` | Backups publicly readable and listable |
+| CKV_GCP_42 | Service account has admin roles | `google_project_iam_member.mongo_overprivileged[compute.admin / storage.admin]` | Overly permissive CSP permissions on the VM. Plan scan only. Also flags the CI deployer; see group 2 |
 
 The over-privileged VM service account (`compute.admin` + `storage.admin`) and the `cluster-admin` binding are also required weaknesses, but Checkov raises nothing for them: the first is a role choice it does not judge, and the second is in `k8s/rbac.yaml`, which this Terraform scan does not cover.
 
@@ -31,6 +37,7 @@ The over-privileged VM service account (`compute.admin` + `storage.admin`) and t
 | CKV_GCP_65 | GKE RBAC not managed with Google Groups | `google_container_cluster.wiz` | The lab org has no Workspace groups. Production: Google Groups for RBAC |
 | CKV_GCP_66 | Binary Authorization not enabled on the cluster | `google_container_cluster.wiz` | Turned on as a separate demo step, so the first deploy is not blocked before the attestor exists |
 | CKV_GCP_41 | Service Account User granted at project level | `google_project_iam_member.iac["roles/iam.serviceAccountUser"]` | The Terraform CI identity must attach service accounts to the VM and the nodes. Production: grant it on those specific service accounts only |
+| CKV_GCP_42 (CI) | Service account has admin roles | `google_project_iam_member.iac[...]` (13 `*.admin` roles) | Terraform creates every resource, so its identity needs them, scoped to this project and usable only from this repo via WIF. Production: custom roles with only the permissions the plan uses |
 | CKV_GCP_49 | Roles that manage or impersonate service accounts at project level | `google_project_iam_member.iac[...serviceAccountAdmin / serviceAccountUser]` | The CI identity creates the service accounts. Production: separate bootstrap identity, scoped grants |
 
 ## 3. False positives (the control is in place, Checkov cannot see it)
@@ -39,6 +46,7 @@ The over-privileged VM service account (`compute.admin` + `storage.admin`) and t
 | --- | --- | --- | --- |
 | CKV_GCP_12 | Network Policy not enabled | `google_container_cluster.wiz` | `datapath_provider = "ADVANCED_DATAPATH"` (Dataplane V2) enforces NetworkPolicy natively; the `network_policy` block Checkov looks for is not allowed with it |
 | CKV_GCP_69 | GKE Metadata Server not enabled | `google_container_cluster.wiz` | It is set where it applies: `workload_metadata_config { mode = "GKE_METADATA" }` on the node pool. The cluster has no default pool |
+| CKV_GCP_63 | Bucket logs to itself | `google_storage_bucket.backups` | The bucket has no `logging` block, so it logs nowhere, let alone to itself; the plan shows `logging` as empty and the check misreads it. Access logging itself is CKV_GCP_62 (group 2). Plan scan only |
 | CKV_GCP_125 | GitHub Actions OIDC trust not restricted | `google_iam_workload_identity_pool_provider.github` | `attribute_condition = "assertion.repository == '${var.github_repo}'"` restricts it to this repo; Checkov cannot resolve the variable |
 
 ## 4. Fixed in Terraform (no longer skipped)
