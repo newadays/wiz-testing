@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tasky
+  namespace: tasky
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'   # container-native load balancing: LB sends straight to pod IPs
+    cloud.google.com/backend-config: '{"default": "tasky"}'
+spec:
+  type: ClusterIP
+  selector: { app: tasky }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: tasky
+  namespace: tasky
+spec:
+  healthCheck:
+    requestPath: /healthz/ready
+    port: 8080
+    type: HTTP
+  timeoutSec: 30
+  connectionDraining:
+    drainingTimeoutSec: 30

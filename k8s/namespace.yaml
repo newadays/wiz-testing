@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tasky
+  labels:
+    # Baseline only: the exercise requires a cluster-admin workload, which "restricted" would not change,
+    # but "privileged" containers are still refused here. The prod namespace (see security/) enforces restricted.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted

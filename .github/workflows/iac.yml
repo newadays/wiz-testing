@@ -1,0 +1,123 @@
+# Pipeline 1: Infrastructure as Code. Plan on every PR, apply on merge to main. Auth via OIDC, no keys.
+name: iac
+on:
+  pull_request:
+    paths: ["terraform/**", ".github/workflows/iac.yml"]
+  push:
+    branches: [main]
+    paths: ["terraform/**", ".github/workflows/iac.yml"]
+  workflow_dispatch:
+    inputs:
+      destroy:
+        description: "Run terraform destroy instead of apply"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write        # OIDC token for Workload Identity Federation
+  pull-requests: write   # post the plan as a PR comment
+  security-events: write # upload SARIF from the scanners
+
+env:
+  TF_VERSION: "1.9.8"
+  TF_DIR: terraform
+  GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+
+jobs:
+  policy:
+    name: Scan IaC
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkov (misconfigurations)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,checkov.sarif
+          # The exercise REQUIRES these weaknesses; they are documented in security/CHECKOV-SKIPS.md and skipped by ID.
+          # Everything else fails the build. Remove the skips and watch the pipeline refuse to deploy.
+          skip_check: CKV_GCP_2,CKV_GCP_40,CKV_GCP_32,CKV_GCP_39,CKV_GCP_28,CKV_GCP_114,CKV_GCP_62,CKV_GCP_38,CKV_GCP_65,CKV_GCP_66,CKV_GCP_84,CKV_GCP_41,CKV_GCP_49,CKV_GCP_12,CKV_GCP_69,CKV_GCP_125
+          soft_fail: false
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: checkov.sarif }
+      - name: tfsec (second opinion)
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform
+          soft_fail: true   # report only; Checkov is the gate
+      - name: gitleaks (no secrets in the repo)
+        uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+  plan:
+    name: Plan
+    needs: policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CI_IAC_SA }}
+      - run: terraform -chdir=$TF_DIR init -backend-config="bucket=$TF_STATE_BUCKET"
+      - run: terraform -chdir=$TF_DIR fmt -check && terraform -chdir=$TF_DIR validate
+      - name: Plan
+        id: plan
+        run: |
+          terraform -chdir=$TF_DIR plan -no-color -input=false -out=tfplan \
+            -var "project=$GCP_PROJECT" -var "operator_cidr=${{ vars.OPERATOR_CIDR }}" \
+            -var "github_repo=${{ github.repository }}" -var "alert_email=${{ vars.ALERT_EMAIL }}" \
+            -var "candidate_name=${{ vars.CANDIDATE_NAME }}" | tee plan.txt
+      - name: Scan the plan (catches computed values the static scan cannot see)
+        run: |
+          terraform -chdir=$TF_DIR show -json tfplan > plan.json
+          pip install -q checkov && checkov -f plan.json --quiet --compact \
+            --skip-check CKV_GCP_2,CKV_GCP_40,CKV_GCP_32,CKV_GCP_39,CKV_GCP_28,CKV_GCP_114,CKV_GCP_62,CKV_GCP_38,CKV_GCP_65,CKV_GCP_66,CKV_GCP_84,CKV_GCP_41,CKV_GCP_49,CKV_GCP_12,CKV_GCP_69,CKV_GCP_125
+      - uses: actions/upload-artifact@v4
+        with: { name: tfplan, path: "${{ env.TF_DIR }}/tfplan", retention-days: 1 }
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('plan.txt', 'utf8').slice(-60000);
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number,
+              body: "### terraform plan\n```\n" + plan + "\n```" });
+
+  apply:
+    name: Apply
+    needs: plan
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production   # required reviewer configured in GitHub: a human approves every apply
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "${{ env.TF_VERSION }}" }
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CI_IAC_SA }}
+      - run: terraform -chdir=$TF_DIR init -backend-config="bucket=$TF_STATE_BUCKET"
+      - uses: actions/download-artifact@v4
+        if: ${{ !inputs.destroy }}
+        with: { name: tfplan, path: "${{ env.TF_DIR }}" }
+      - name: Apply the reviewed plan
+        if: ${{ !inputs.destroy }}
+        run: terraform -chdir=$TF_DIR apply -input=false tfplan
+      - name: Destroy
+        if: ${{ inputs.destroy }}
+        run: |
+          terraform -chdir=$TF_DIR destroy -auto-approve -input=false \
+            -var "project=$GCP_PROJECT" -var "operator_cidr=${{ vars.OPERATOR_CIDR }}" \
+            -var "github_repo=${{ github.repository }}" -var "alert_email=${{ vars.ALERT_EMAIL }}" \
+            -var "candidate_name=${{ vars.CANDIDATE_NAME }}"
+      - run: terraform -chdir=$TF_DIR output

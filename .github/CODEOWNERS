@@ -1,0 +1,4 @@
+# Every change to infrastructure, pipelines, or Kubernetes config needs a review from the owner.
+/terraform/            @YOUR_GITHUB_USER
+/k8s/                  @YOUR_GITHUB_USER
+/.github/              @YOUR_GITHUB_USER

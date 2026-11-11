@@ -1,0 +1,70 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+functions/lib/
+
+# macOS
+.DS_Store
+
+# keys and certificates
+*.pem
+*.key
+*.p12
+
+# local env files (VITE_* values for the web build; never server secrets)
+.env
+.env*.local
+.env.dev
+.env.development
+.env.production
+# Functions emulator secret overrides (e.g. META_API_KEY)
+.secret.local
+functions/.env*
+
+# logs
+npm-debug.*
+firebase-debug.log
+*-debug.log
+.firebase/
+
+# local-only notes
+TODO.md
+
+# Personal Claude Code permissions
+.claude/settings.local.json
+
+# Service account keys (never commit). Narrow on purpose: *.json would hide
+# new config and fixture files.
+*service-account*.json
+*-sa-key*.json
+
+# Python
+__pycache__/
+*.pyc
+
+
+#misc
+.vscode/
+
+# Demo sample images and manifest (data/fetch_demo_samples.py)
+data/out/
+.venv/
+.pytest_cache/
+terraform/.terraform/
+terraform/*.tfstate*
+terraform/*.tfplan
+terraform/terraform.tfvars
+*.sarif
+terraform/tfplan
+terraform/plan.json
+notes.md
+cmd.md
+terraform/tfplan
+terraform/plan.json
+terraform/terraform.tfvars
+*.tfstate*
+.terraform/
+.venv/

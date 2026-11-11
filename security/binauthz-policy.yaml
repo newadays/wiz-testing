@@ -1,0 +1,12 @@
+# PREVENTATIVE CONTROL (supply chain): Binary Authorization admits only images the CI pipeline signed.
+# Apply after the first successful app pipeline has pushed and signed an image:
+#   gcloud container binauthz policy import security/binauthz-policy.yaml
+#   gcloud container clusters update wiz-gke --zone us-central1-a \
+#     --binauthz-evaluation-mode=PROJECT_SINGLETON_POLICY_ENFORCE
+# Demonstration: an unsigned image (e.g. a plain public nginx) is then denied at admission.
+admissionWhitelistPatterns:
+  - namePattern: gke.gcr.io/*
+  - namePattern: us-central1-docker.pkg.dev/PROJECT_ID/apps/tasky@sha256:*
+defaultAdmissionRule:
+  evaluationMode: ALWAYS_DENY
+  enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG

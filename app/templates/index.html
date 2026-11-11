@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tasky-py</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body { max-width: 640px; margin: 48px auto; padding: 0 16px; color: #1a1a1a; background: #f6f7fb; }
+    h1 { font-size: 28px; margin: 0 0 4px; }
+    .meta { color: #6b7280; font-size: 13px; margin-bottom: 24px; }
+    form.add { display: flex; gap: 8px; margin-bottom: 24px; }
+    form.add input { flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; }
+    button { padding: 10px 14px; border: 0; border-radius: 8px; background: #0a5cf5; color: #fff; font-size: 14px; cursor: pointer; }
+    button.ghost { background: transparent; color: #6b7280; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+    li .text { flex: 1; }
+    li.done .text { text-decoration: line-through; color: #9ca3af; }
+    li form { margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Tasky-py</h1>
+  <div class="meta">served by {{ hostname }} · version {{ version }} · {{ todos|length }} item(s) in MongoDB</div>
+  <form class="add" method="post" action="/add">
+    <input name="text" placeholder="What needs doing?" autofocus required>
+    <button type="submit">Add</button>
+  </form>
+  <ul>
+    {% for t in todos %}
+    <li class="{{ 'done' if t.done else '' }}">
+      <form method="post" action="/toggle/{{ t._id }}"><button class="ghost" type="submit">{{ '☑' if t.done else '☐' }}</button></form>
+      <span class="text">{{ t.text }}</span>
+      <form method="post" action="/delete/{{ t._id }}"><button class="ghost" type="submit">✕</button></form>
+    </li>
+    {% else %}
+    <li><span class="text" style="color:#9ca3af">Nothing yet. Add the first item.</span></li>
+    {% endfor %}
+  </ul>
+</body>
+</html>

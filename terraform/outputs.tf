@@ -1,0 +1,9 @@
+output "mongo_public_ip" { value = google_compute_instance.mongo.network_interface[0].access_config[0].nat_ip }
+output "mongo_private_ip" { value = google_compute_instance.mongo.network_interface[0].network_ip }
+output "backup_bucket_url" { value = "https://storage.googleapis.com/${google_storage_bucket.backups.name}/" }
+output "gke_get_credentials" { value = "gcloud container clusters get-credentials wiz-gke --zone ${var.zone} --project ${var.project}" }
+output "gke_connect_gateway" { value = "gcloud container fleet memberships get-credentials wiz-gke --project ${var.project}" }
+output "artifact_registry" { value = "${var.region}-docker.pkg.dev/${var.project}/apps" }
+output "wif_provider" { value = google_iam_workload_identity_pool_provider.github.name }
+output "ci_iac_sa" { value = google_service_account.iac.email }
+output "ci_app_sa" { value = google_service_account.app.email }

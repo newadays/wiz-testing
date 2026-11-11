@@ -1,0 +1,8 @@
+project         = "your-cloudlabs-project-id"
+region          = "us-central1"
+zone            = "us-central1-a"
+candidate_name  = "gbenga"
+operator_cidr   = "203.0.113.4/32"
+github_repo     = "YOUR_GITHUB_USER/wiz-exercise"
+alert_email     = "you@example.com"
+enable_org_policies = false

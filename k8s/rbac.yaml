@@ -1,0 +1,21 @@
+# INTENTIONAL WEAKNESS (exercise requirement): the application's ServiceAccount is bound to cluster-admin.
+# Consequence: any code execution in the container (RCE, dependency compromise) is full control of the cluster:
+# read every Secret in every namespace, create privileged pods on any node, and from a node reach the GCP metadata server.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tasky
+  namespace: tasky
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tasky-cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: tasky
+    namespace: tasky
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io

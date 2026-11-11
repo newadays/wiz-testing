@@ -1,0 +1,16 @@
+# Requirement: exposed via a Kubernetes Ingress and a CSP load balancer.
+# The GKE Ingress controller provisions a global external HTTP(S) Load Balancer from this object.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tasky
+  namespace: tasky
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.allow-http: "true"   # HTTP for the demo; add a ManagedCertificate + host for HTTPS
+spec:
+  defaultBackend:
+    service:
+      name: tasky
+      port:
+        number: 80
