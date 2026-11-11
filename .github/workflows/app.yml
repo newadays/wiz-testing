@@ -125,7 +125,13 @@ jobs:
         run: |
           WANT="${{ needs.build.outputs.digest }}"
           echo "expected digest: $WANT"
-          kubectl -n tasky get pods -l app=tasky -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.containerStatuses[0].imageID}{"\n"}{end}' | tee pods.txt
+          # Old pods can still be shutting down right after the rollout; give them up to 2 minutes to go.
+          for i in $(seq 1 12); do
+            kubectl -n tasky get pods -l app=tasky -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.containerStatuses[0].imageID}{"\n"}{end}' > pods.txt
+            [ -s pods.txt ] && ! grep -q -v -- "$WANT" pods.txt && break
+            sleep 10
+          done
+          cat pods.txt
           [ -s pods.txt ] || { echo "no tasky pods found"; exit 1; }
           if grep -v -- "$WANT" pods.txt; then echo "pods above are NOT running the scanned image"; exit 1; fi
           echo "all running pods use $WANT, which contains wizexercise.txt"
