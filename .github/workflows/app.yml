@@ -56,6 +56,7 @@ jobs:
           format: sarif
           output: trivy.sarif
           severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true # without it, SARIF output scans every severity and exit-code fails on LOW/MEDIUM
           ignore-unfixed: true
           exit-code: "1"
       - uses: github/codeql-action/upload-sarif@v3
