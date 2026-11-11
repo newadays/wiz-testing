@@ -30,7 +30,7 @@ jobs:
     name: Scan IaC
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Checkov (misconfigurations)
         uses: bridgecrewio/checkov-action@v12
         with:
@@ -59,7 +59,7 @@ jobs:
     needs: policy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
         with: { terraform_version: "${{ env.TF_VERSION }}" }
       - uses: google-github-actions/auth@v2
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production   # required reviewer configured in GitHub: a human approves every apply
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
         with: { terraform_version: "${{ env.TF_VERSION }}" }
       - uses: google-github-actions/auth@v2
