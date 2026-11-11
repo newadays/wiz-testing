@@ -118,8 +118,17 @@ jobs:
           sed -i "s#PROJECT_ID#$GCP_PROJECT#g" kustomization.yaml deployment.yaml
           kubectl kustomize . | sed "s#${IMAGE}:latest#${IMAGE}@${{ needs.build.outputs.digest }}#" | kubectl apply -f -
           kubectl -n tasky rollout status deployment/tasky --timeout=180s
-      - name: Verify wizexercise.txt in the RUNNING container
-        run: kubectl -n tasky exec deploy/tasky -- cat /app/wizexercise.txt
+      # The Connect gateway refuses kubectl exec (streaming upgrade, HTTP 400), so prove it by digest instead:
+      # the build job showed wizexercise.txt is in this exact image, and every running pod must be that image.
+      # To read the file live, exec from the laptop over the direct endpoint (cmd.md step 11).
+      - name: Verify the RUNNING pods are the image that contains wizexercise.txt
+        run: |
+          WANT="${{ needs.build.outputs.digest }}"
+          echo "expected digest: $WANT"
+          kubectl -n tasky get pods -l app=tasky -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.containerStatuses[0].imageID}{"\n"}{end}' | tee pods.txt
+          [ -s pods.txt ] || { echo "no tasky pods found"; exit 1; }
+          if grep -v -- "$WANT" pods.txt; then echo "pods above are NOT running the scanned image"; exit 1; fi
+          echo "all running pods use $WANT, which contains wizexercise.txt"
       - name: Smoke test through the load balancer
         run: |
           for i in $(seq 1 30); do
