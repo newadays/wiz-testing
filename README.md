@@ -1,6 +1,6 @@
 # Wiz Technical Exercise — Tasky on GKE
 
-A two-tier web app built, deployed to **Google Cloud (GKE)** entirely through Terraform and two CI/CD pipelines. The environment contains the intentional weaknesses the exercise requires, and a layer of preventative + detective controls that catch them.
+A two-tier web app built, deployed to **Google Cloud (GKE)** entirely through Terraform and CI/CD pipelines. The environment contains the intentional weaknesses the exercise requires, and a layer of preventative + detective controls that catch them.
 
 ```
 Internet ──▶ GKE Ingress (HTTP(S) LB) ──▶ Tasky pods (private subnet)
