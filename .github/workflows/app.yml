@@ -125,9 +125,11 @@ jobs:
         run: |
           WANT="${{ needs.build.outputs.digest }}"
           echo "expected digest: $WANT"
+          # Compare the image each pod was told to run (a digest, so it can't drift). Not status.imageID: when a new push is
+          # byte-identical to an old one, the node reports whichever digest it cached first.
           # Old pods can still be shutting down right after the rollout; give them up to 2 minutes to go.
           for i in $(seq 1 12); do
-            kubectl -n tasky get pods -l app=tasky -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.containerStatuses[0].imageID}{"\n"}{end}' > pods.txt
+            kubectl -n tasky get pods -l app=tasky -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.spec.containers[0].image}{"\n"}{end}' > pods.txt
             [ -s pods.txt ] && ! grep -q -v -- "$WANT" pods.txt && break
             sleep 10
           done
