@@ -107,7 +107,7 @@ jobs:
           workload_identity_provider: ${{ vars.WIF_PROVIDER }}
           service_account: ${{ vars.CI_IAC_SA }}
       - run: terraform -chdir=$TF_DIR init -backend-config="bucket=$TF_STATE_BUCKET"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         if: ${{ !inputs.destroy }}
         with: { name: tfplan, path: "${{ env.TF_DIR }}" }
       - name: Apply the reviewed plan
