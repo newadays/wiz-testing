@@ -13,6 +13,8 @@ COPY templates ./templates
 # It is copied from the build context (committed to the repo) so it is in the image layer,
 # not mounted at runtime. Verify: docker run --rm IMAGE cat /app/wizexercise.txt
 COPY wizexercise.txt /app/wizexercise.txt
+# Pick up Debian security fixes released after the base image was built (e.g. zlib), so Trivy's gate passes.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 RUN useradd --uid 10001 --no-create-home appuser && chown -R appuser /app
 USER 10001
 ENV PYTHONUNBUFFERED=1
