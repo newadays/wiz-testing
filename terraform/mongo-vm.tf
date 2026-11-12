@@ -16,6 +16,15 @@ resource "google_project_iam_member" "mongo_overprivileged" {
   member   = "serviceAccount:${google_service_account.mongo.email}"
 }
 
+# Not part of the weakness: the Ops Agent needs these to ship auth.log (the SSH-login detection's data source)
+# and VM metrics. Without logWriter every write is refused and the ssh-login-mongo-vm alert never sees data.
+resource "google_project_iam_member" "mongo_agent" {
+  for_each = toset(["roles/logging.logWriter", "roles/monitoring.metricWriter"])
+  project  = var.project
+  role     = each.value
+  member   = "serviceAccount:${google_service_account.mongo.email}"
+}
+
 resource "random_password" "mongo_admin" {
   length  = 24
   special = false
